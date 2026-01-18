@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Intent-Based Chatbot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        /* --- Global Resets & Typography --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- Main Container --- */
+        .chat-container {
+            width: 100%;
+            max-width: 400px;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 80vh; /* Fixed height for better UI */
+            max-height: 600px;
+        }
+
+        /* --- Header --- */
+        .chat-header {
+            background: #ffffff;
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            text-align: center;
+        }
+
+        .chat-header h2 {
+            font-size: 18px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .chat-header span {
+            font-size: 12px;
+            color: #28a745;
+            display: block;
+            margin-top: 5px;
+        }
+
+        /* --- Chat Area --- */
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Scrollbar Styling */
+        .chat-box::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-box::-webkit-scrollbar-thumb {
+            background-color: #ccc;
+            border-radius: 3px;
+        }
+
+        /* --- Bubbles --- */
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+            word-wrap: break-word;
+        }
+
+        /* User Bubble */
+        .message.user {
+            align-self: flex-end;
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* Bot Bubble */
+        .message.bot {
+            align-self: flex-start;
+            background: #e9ecef;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Label inside bubble (optional, defines who spoke) */
+        .msg-label {
+            font-size: 10px;
+            margin-bottom: 4px;
+            opacity: 0.7;
+            display: block;
+            font-weight: bold;
+        }
+
+        /* --- Input Area --- */
+        .input-area {
+            padding: 20px;
+            background: #fff;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: #667eea;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background: #5a6fd6;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <h2>Intent Detector</h2>
+        <span>● Online</span>
+    </div>
+
+    <div class="chat-box" id="chatBox">
+        <div class="message bot">
+            <span class="msg-label">Bot</span>
+            Hello! Type a message to detect intent.
+        </div>
+    </div>
+
+    <div class="input-area">
+        <input id="userInput" type="text" placeholder="Type your message..." onkeydown="if(event.key === 'Enter') sendMessage()" />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+function sendMessage() {
+    const inputField = document.getElementById("userInput");
+    const message = inputField.value.trim();
+
+    if (message === "") return;
+
+    const chatBox = document.getElementById("chatBox");
+
+    // Show user message (Styled as .message.user)
+    chatBox.innerHTML += `
+        <div class="message user">
+            <span class="msg-label">You</span>
+            ${message}
+        </div>`;
+    
+    inputField.value = "";
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // --- Original Fetch Logic Preserved ---
+    fetch("/predict", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message: message })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Show bot message (Styled as .message.bot)
+        chatBox.innerHTML += `
+            <div class="message bot">
+                <span class="msg-label">Bot</span>
+                Predicted Intent: <strong>${data.intent}</strong>
+            </div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    })
+    .catch(() => {
+        chatBox.innerHTML += `
+            <div class="message bot">
+                <span class="msg-label">Bot</span>
+                Error connecting to server.
+            </div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+}
+</script>
+
+</body>
+</html>
